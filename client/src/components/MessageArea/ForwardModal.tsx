@@ -28,10 +28,13 @@ export default function ForwardModal({ message, onClose }: Props) {
   const [step, setStep] = useState<'select' | 'confirm' | 'done'>('select');
 
   useEffect(() => {
-    fetch('/api/rooms').then((r) => r.json()).then(setRooms);
-    if (username) {
-      fetch(`/api/dm?username=${encodeURIComponent(username)}`).then((r) => r.json()).then(setDms);
-    }
+    if (!username) return;
+    fetch(`/api/rooms?username=${encodeURIComponent(username)}`).then((r) => r.json()).then((data) => {
+      if (Array.isArray(data)) setRooms(data);
+    });
+    fetch(`/api/dm?username=${encodeURIComponent(username)}`).then((r) => r.json()).then((data) => {
+      if (Array.isArray(data)) setDms(data);
+    });
   }, [username]);
 
   useEffect(() => {

@@ -2,15 +2,18 @@ import { useState, useRef, useEffect, type FormEvent, type KeyboardEvent, type C
 import EmojiPicker, { Theme, type EmojiClickData } from 'emoji-picker-react';
 import { useSocket } from '../context/SocketContext';
 import { useTyping } from '../hooks/useTyping';
+import type { Message } from '../types';
 import styles from './MessageInput.module.css';
 
 interface Props {
   roomId: string;
   isDm?: boolean;
   dmRecipient?: string;
+  replyTo?: Message | null;
+  onClearReply?: () => void;
 }
 
-export default function MessageInput({ roomId, isDm, dmRecipient }: Props) {
+export default function MessageInput({ roomId, isDm, dmRecipient, replyTo, onClearReply }: Props) {
   const { socket } = useSocket();
   const { handleInputChange, stopTyping } = useTyping(roomId, { isDm, dmRecipient });
   const [text, setText] = useState('');
@@ -55,14 +58,16 @@ export default function MessageInput({ roomId, isDm, dmRecipient }: Props) {
     if (preview) {
       uploadAndSend(trimmed);
     } else {
+      const replyToId = replyTo?.id || undefined;
       if (isDm && dmRecipient) {
-        socket.emit('send_dm', { to: dmRecipient, content: trimmed });
+        socket.emit('send_dm', { to: dmRecipient, content: trimmed, replyToId });
       } else {
-        socket.emit('send_message', { roomId, content: trimmed });
+        socket.emit('send_message', { roomId, content: trimmed, replyToId });
       }
       setText('');
       stopTyping();
       setShowEmoji(false);
+      onClearReply?.();
       inputRef.current?.focus();
     }
   }
@@ -90,16 +95,18 @@ export default function MessageInput({ roomId, isDm, dmRecipient }: Props) {
 
       const { fileUrl, fileType, fileName } = await uploadRes.json();
 
+      const replyToId = replyTo?.id || undefined;
       if (isDm && dmRecipient) {
-        socket.emit('send_dm', { to: dmRecipient, content: caption, fileUrl, fileType, fileName });
+        socket.emit('send_dm', { to: dmRecipient, content: caption, fileUrl, fileType, fileName, replyToId });
       } else {
-        socket.emit('send_message', { roomId, content: caption, fileUrl, fileType, fileName });
+        socket.emit('send_message', { roomId, content: caption, fileUrl, fileType, fileName, replyToId });
       }
 
       setText('');
       clearPreview();
       stopTyping();
       setShowEmoji(false);
+      onClearReply?.();
       inputRef.current?.focus();
     } catch {
       // Could show error toast
@@ -143,6 +150,19 @@ export default function MessageInput({ roomId, isDm, dmRecipient }: Props) {
 
   return (
     <form className={styles.form} onSubmit={handleSubmit}>
+      {replyTo && (
+        <div className={styles.replyBar}>
+          <div className={styles.replyContent}>
+            <span className={styles.replyLabel}>Replying to <strong>{replyTo.username}</strong></span>
+            <span className={styles.replyPreview}>{replyTo.content.slice(0, 100)}</span>
+          </div>
+          <button type="button" className={styles.replyClose} onClick={onClearReply}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+              <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        </div>
+      )}
       {preview && (
         <div className={styles.previewBar}>
           {isImage ? (

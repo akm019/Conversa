@@ -18,6 +18,9 @@ export interface Message {
   file_type: string | null;
   file_name: string | null;
   forwarded: number;
+  reply_to_id: number | null;
+  reply_to_content: string | null;
+  reply_to_username: string | null;
   status: 'sent' | 'delivered' | 'read';
   created_at: string;
 }

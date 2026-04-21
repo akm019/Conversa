@@ -21,4 +21,11 @@ app.use('/api/rooms', messagesRouter);
 app.use('/api/dm', dmRouter);
 app.use('/api/upload', uploadRouter);
 
+// In production, serve the built React app
+const clientDist = path.join(__dirname, '..', '..', 'client', 'dist');
+app.use(express.static(clientDist));
+app.get('*', (_req, res) => {
+  res.sendFile(path.join(clientDist, 'index.html'));
+});
+
 export default app;

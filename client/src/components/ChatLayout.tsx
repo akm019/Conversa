@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
+import type { Message } from '../types';
 import { useSocket } from '../context/SocketContext';
 import { useUser } from '../context/UserContext';
 import { useUnread } from '../hooks/useUnread';
@@ -12,6 +13,7 @@ import OnlineUsers from './OnlineUsers';
 import OnlineAvatars from './OnlineAvatars';
 import InviteModal from './InviteModal';
 import ConnectionStatus from './ConnectionStatus';
+import { useNotificationSound } from '../hooks/useNotificationSound';
 import styles from './ChatLayout.module.css';
 
 function getDmOtherUser(roomId: string, currentUser: string): string {
@@ -21,11 +23,13 @@ function getDmOtherUser(roomId: string, currentUser: string): string {
 }
 
 export default function ChatLayout() {
+  useNotificationSound();
   const { socket, isConnected } = useSocket();
   const { username } = useUser();
   const [activeRoomId, setActiveRoomId] = useState('general');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showInvite, setShowInvite] = useState(false);
+  const [replyTo, setReplyTo] = useState<Message | null>(null);
   const { unreadCounts, clearUnread } = useUnread(activeRoomId);
   const { onlineUsers } = useGlobalPresence();
   const { rooms, createRoom, deleteRoomById, inviteToRoom, invite, dismissInvite } = useRooms();
@@ -48,6 +52,7 @@ export default function ChatLayout() {
     setActiveRoomId(roomId);
     clearUnread(roomId);
     setSidebarOpen(false);
+    setReplyTo(null);
   }, [clearUnread]);
 
   return (
@@ -140,8 +145,8 @@ export default function ChatLayout() {
               {!isDm && <OnlineUsers roomId={activeRoomId} />}
             </div>
           </div>
-          <MessageArea roomId={activeRoomId} isDm={isDm} dmRecipient={isDm ? dmPartnerName : undefined} />
-          <MessageInput roomId={activeRoomId} isDm={isDm} dmRecipient={isDm ? dmPartnerName : undefined} />
+          <MessageArea roomId={activeRoomId} isDm={isDm} dmRecipient={isDm ? dmPartnerName : undefined} onReply={setReplyTo} />
+          <MessageInput roomId={activeRoomId} isDm={isDm} dmRecipient={isDm ? dmPartnerName : undefined} replyTo={replyTo} onClearReply={() => setReplyTo(null)} />
         </div>
       </div>
 

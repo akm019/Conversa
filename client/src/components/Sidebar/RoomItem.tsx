@@ -10,7 +10,7 @@ interface Props {
   onDelete?: () => void;
 }
 
-export default function RoomItem({ room, isActive, unreadCount, isAdmin, onClick, onDelete }: Props) {
+export default function RoomItem({ room, isActive, unreadCount, isAdmin: _isAdmin, onClick, onDelete }: Props) {
   return (
     <button
       className={`${styles.item} ${isActive ? styles.active : ''}`}

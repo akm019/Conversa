@@ -1,5 +1,5 @@
 {
-  "name": "realtime-chat",
+  "name": "conversa",
   "version": "1.0.0",
   "private": true,
   "workspaces": [
@@ -9,7 +9,9 @@
   "scripts": {
     "dev": "concurrently \"npm run dev -w server\" \"npm run dev -w client\"",
     "dev:server": "npm run dev -w server",
-    "dev:client": "npm run dev -w client"
+    "dev:client": "npm run dev -w client",
+    "build": "npm run build -w client && npm run build -w server",
+    "start": "node server/dist/server.js"
   },
   "devDependencies": {
     "concurrently": "^8.2.2"

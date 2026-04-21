@@ -30,8 +30,16 @@ export function initSchema(db: Database.Database): void {
       file_type  TEXT,
       file_name  TEXT,
       forwarded  INTEGER NOT NULL DEFAULT 0,
+      reply_to_id INTEGER REFERENCES messages(id) ON DELETE SET NULL,
       status     TEXT NOT NULL DEFAULT 'sent' CHECK(status IN ('sent', 'delivered', 'read')),
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS reactions (
+      message_id INTEGER NOT NULL REFERENCES messages(id) ON DELETE CASCADE,
+      username   TEXT NOT NULL,
+      emoji      TEXT NOT NULL,
+      PRIMARY KEY (message_id, username, emoji)
     );
 
     CREATE INDEX IF NOT EXISTS idx_messages_room_id

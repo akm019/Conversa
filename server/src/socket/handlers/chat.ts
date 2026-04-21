@@ -1,5 +1,5 @@
 import { Socket, Server } from 'socket.io';
-import { insertMessage, getRoomById, getOrCreateDm, getDmRoomId, getMessageById, updateMessageContent, deleteMessage, markMessagesDelivered, markMessagesRead } from '../../db/queries';
+import { insertMessage, getRoomById, getOrCreateDm, getDmRoomId, getMessageById, updateMessageContent, deleteMessage, markMessagesDelivered, markMessagesRead, addReaction, removeReaction, getReactions } from '../../db/queries';
 import { sanitize } from '../../utils/sanitize';
 import { config } from '../../config';
 import {
@@ -36,9 +36,9 @@ export function cleanupRateLimit(socketId: string): void {
 export function handleSendMessage(
   io: Server,
   socket: Socket,
-  data: { roomId: string; content: string; fileUrl?: string; fileType?: string; fileName?: string; forwarded?: boolean }
+  data: { roomId: string; content: string; fileUrl?: string; fileType?: string; fileName?: string; forwarded?: boolean; replyToId?: number }
 ): void {
-  const { roomId, content, fileUrl, fileType, fileName, forwarded } = data;
+  const { roomId, content, fileUrl, fileType, fileName, forwarded, replyToId } = data;
 
   const isFileMessage = !!fileUrl;
 
@@ -74,7 +74,7 @@ export function handleSendMessage(
   const messageContent = sanitized || (fileName ? `Sent ${fileName}` : 'Sent a file');
   const message = insertMessage(
     roomId, socket.data.username, messageContent, 'user', socket.data.avatarId,
-    fileUrl || null, fileType || null, fileName || null, !!forwarded
+    fileUrl || null, fileType || null, fileName || null, !!forwarded, replyToId || null
   );
 
   removeFromTyping(roomId, socket.data.username);
@@ -110,9 +110,9 @@ export function handleTypingStop(
 export function handleSendDm(
   io: Server,
   socket: Socket,
-  data: { to: string; content: string; fileUrl?: string; fileType?: string; fileName?: string; forwarded?: boolean }
+  data: { to: string; content: string; fileUrl?: string; fileType?: string; fileName?: string; forwarded?: boolean; replyToId?: number }
 ): void {
-  const { to, content, fileUrl, fileType, fileName, forwarded } = data;
+  const { to, content, fileUrl, fileType, fileName, forwarded, replyToId } = data;
   const isFileMessage = !!fileUrl;
 
   if (!to) {
@@ -145,7 +145,7 @@ export function handleSendDm(
   const messageContent = sanitized || (fileName ? `Sent ${fileName}` : 'Sent a file');
   const message = insertMessage(
     dm.id, from, messageContent, 'user', socket.data.avatarId,
-    fileUrl || null, fileType || null, fileName || null, !!forwarded
+    fileUrl || null, fileType || null, fileName || null, !!forwarded, replyToId || null
   );
 
   // Clear typing on send
@@ -331,5 +331,54 @@ export function handleDmRead(
   const senderSockets = getSocketIdsForUser(otherUser);
   for (const sid of senderSockets) {
     io.to(sid).emit('message_status_update', { roomId, messageIds: ids, status: 'read' });
+  }
+}
+
+export function handleToggleReaction(
+  io: Server,
+  socket: Socket,
+  data: { messageId: number; emoji: string }
+): void {
+  const { messageId, emoji } = data;
+  if (!messageId || !emoji) return;
+
+  const msg = getMessageById(messageId);
+  if (!msg) return;
+
+  const username = socket.data.username;
+
+  // Toggle: if already reacted with this emoji, remove it; else add it
+  const existing = getReactions(messageId);
+  const hasReacted = existing.some((r) => r.username === username && r.emoji === emoji);
+
+  if (hasReacted) {
+    removeReaction(messageId, username, emoji);
+  } else {
+    addReaction(messageId, username, emoji);
+  }
+
+  // Get updated reactions and broadcast
+  const reactions = getReactions(messageId);
+  const grouped: { emoji: string; users: string[] }[] = [];
+  const map: Record<string, string[]> = {};
+  for (const r of reactions) {
+    if (!map[r.emoji]) map[r.emoji] = [];
+    map[r.emoji].push(r.username);
+  }
+  for (const [e, users] of Object.entries(map)) {
+    grouped.push({ emoji: e, users });
+  }
+
+  const payload = { messageId, roomId: msg.room_id, reactions: grouped };
+
+  if (msg.room_id.startsWith('dm:')) {
+    const parts = msg.room_id.split(':');
+    const otherUser = parts[1] === username ? parts[2] : parts[1];
+    const allSockets = [...new Set([...getSocketIdsForUser(username), ...getSocketIdsForUser(otherUser)])];
+    for (const sid of allSockets) {
+      io.to(sid).emit('reaction_update', payload);
+    }
+  } else {
+    io.to(msg.room_id).emit('reaction_update', payload);
   }
 }

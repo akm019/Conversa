@@ -11,10 +11,11 @@ interface Props {
   roomId: string;
   isDm?: boolean;
   dmRecipient?: string;
+  onReply?: (msg: import('../../types').Message) => void;
 }
 
-export default function MessageArea({ roomId, isDm, dmRecipient }: Props) {
-  const { messages, hasMore, isLoading, loadMore } = useMessages(roomId);
+export default function MessageArea({ roomId, isDm, dmRecipient, onReply }: Props) {
+  const { messages, hasMore, isLoading, loadMore, reactions } = useMessages(roomId);
   const { typingUsers } = useTyping(roomId, { isDm, dmRecipient });
   const containerRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -109,7 +110,7 @@ export default function MessageArea({ roomId, isDm, dmRecipient }: Props) {
             {msg.type === 'system' ? (
               <SystemMessage message={msg} />
             ) : (
-              <MessageBubble message={msg} isDm={isDm} />
+              <MessageBubble message={msg} isDm={isDm} onReply={onReply} reactions={reactions[msg.id] || []} />
             )}
           </div>
         );

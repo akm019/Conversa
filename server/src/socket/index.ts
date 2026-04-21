@@ -3,7 +3,7 @@ import { Server } from 'socket.io';
 import { config } from '../config';
 import { authMiddleware } from './middleware';
 import { handleJoinRoom, handleLeaveRoom } from './handlers/room';
-import { handleSendMessage, handleSendDm, handleTypingStart, handleTypingStop, handleDmTypingStart, handleDmTypingStop, handleEditMessage, handleDeleteMessage, handleDmDelivered, handleDmRead, cleanupRateLimit } from './handlers/chat';
+import { handleSendMessage, handleSendDm, handleTypingStart, handleTypingStop, handleDmTypingStart, handleDmTypingStop, handleEditMessage, handleDeleteMessage, handleDmDelivered, handleDmRead, handleToggleReaction, cleanupRateLimit } from './handlers/chat';
 import { handleDisconnect, registerUser, getAllOnlineUsers, getSocketIdsForUser } from './handlers/presence';
 
 let io: Server;
@@ -44,6 +44,7 @@ export function initSocketServer(httpServer: HttpServer): Server {
     socket.on('delete_message', (data) => handleDeleteMessage(io, socket, data));
     socket.on('dm_delivered', (data) => handleDmDelivered(io, socket, data));
     socket.on('dm_read', (data) => handleDmRead(io, socket, data));
+    socket.on('toggle_reaction', (data) => handleToggleReaction(io, socket, data));
 
     // Broadcast new room to all connected clients
     socket.on('room_created', (room) => {

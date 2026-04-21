@@ -9,6 +9,7 @@ export function useMessages(roomId: string) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [hasMore, setHasMore] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [reactions, setReactions] = useState<Record<number, { emoji: string; users: string[] }[]>>({});
   const roomIdRef = useRef(roomId);
   const isDm = roomId.startsWith('dm:');
 
@@ -18,6 +19,7 @@ export function useMessages(roomId: string) {
     setMessages([]);
     setHasMore(false);
     setIsLoading(true);
+    setReactions({});
 
     fetch(`/api/rooms/${encodeURIComponent(roomId)}/messages`)
       .then((res) => res.json())
@@ -62,13 +64,12 @@ export function useMessages(roomId: string) {
 
         // Auto-deliver and read since we're viewing this DM
         if (data.message.username !== username) {
-          socket.emit('dm_delivered', { roomId: data.dm.id });
-          socket.emit('dm_read', { roomId: data.dm.id });
+          socket!.emit('dm_delivered', { roomId: data.dm.id });
+          socket!.emit('dm_read', { roomId: data.dm.id });
         }
       } else {
-        // Not viewing this DM — just mark delivered
         if (data.message.username !== username) {
-          socket.emit('dm_delivered', { roomId: data.dm.id });
+          socket!.emit('dm_delivered', { roomId: data.dm.id });
         }
       }
     }
@@ -96,17 +97,25 @@ export function useMessages(roomId: string) {
       }
     }
 
+    function onReactionUpdate(data: { messageId: number; roomId: string; reactions: { emoji: string; users: string[] }[] }) {
+      if (data.roomId === roomIdRef.current) {
+        setReactions((prev) => ({ ...prev, [data.messageId]: data.reactions }));
+      }
+    }
+
     socket.on('new_message', onNewMessage);
     socket.on('dm_message', onDmMessage);
     socket.on('message_edited', onMessageEdited);
     socket.on('message_deleted', onMessageDeleted);
     socket.on('message_status_update', onStatusUpdate);
+    socket.on('reaction_update', onReactionUpdate);
     return () => {
       socket.off('new_message', onNewMessage);
       socket.off('dm_message', onDmMessage);
       socket.off('message_edited', onMessageEdited);
       socket.off('message_deleted', onMessageDeleted);
       socket.off('message_status_update', onStatusUpdate);
+      socket.off('reaction_update', onReactionUpdate);
     };
   }, [socket, username]);
 
@@ -148,5 +157,5 @@ export function useMessages(roomId: string) {
     }
   }, [hasMore, isLoading, messages]);
 
-  return { messages, hasMore, isLoading, loadMore, isDm };
+  return { messages, hasMore, isLoading, loadMore, isDm, reactions };
 }

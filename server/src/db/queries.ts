@@ -79,19 +79,25 @@ export function getDmsForUserSafe(username: string): Room[] {
   });
 }
 
+const MSG_SELECT = `
+  SELECT m.*,
+    r.content as reply_to_content,
+    r.username as reply_to_username
+  FROM messages m
+  LEFT JOIN messages r ON m.reply_to_id = r.id
+`;
+
 export function getMessages(roomId: string, before?: number): PaginatedMessages {
   const limit = config.messagePageSize;
 
   let messages: Message[];
   if (before) {
     messages = db
-      .prepare(
-        'SELECT * FROM messages WHERE room_id = ? AND id < ? ORDER BY id DESC LIMIT ?'
-      )
+      .prepare(`${MSG_SELECT} WHERE m.room_id = ? AND m.id < ? ORDER BY m.id DESC LIMIT ?`)
       .all(roomId, before, limit + 1) as Message[];
   } else {
     messages = db
-      .prepare('SELECT * FROM messages WHERE room_id = ? ORDER BY id DESC LIMIT ?')
+      .prepare(`${MSG_SELECT} WHERE m.room_id = ? ORDER BY m.id DESC LIMIT ?`)
       .all(roomId, limit + 1) as Message[];
   }
 
@@ -128,7 +134,7 @@ export function markMessagesRead(roomId: string, recipientUsername: string): num
 }
 
 export function getMessageById(id: number): Message | undefined {
-  return db.prepare('SELECT * FROM messages WHERE id = ?').get(id) as Message | undefined;
+  return db.prepare(`${MSG_SELECT} WHERE m.id = ?`).get(id) as Message | undefined;
 }
 
 export function updateMessageContent(id: number, content: string): Message | undefined {
@@ -140,6 +146,39 @@ export function deleteMessage(id: number): void {
   db.prepare('DELETE FROM messages WHERE id = ?').run(id);
 }
 
+// Reactions
+export function addReaction(messageId: number, username: string, emoji: string): void {
+  db.prepare('INSERT OR IGNORE INTO reactions (message_id, username, emoji) VALUES (?, ?, ?)').run(messageId, username, emoji);
+}
+
+export function removeReaction(messageId: number, username: string, emoji: string): void {
+  db.prepare('DELETE FROM reactions WHERE message_id = ? AND username = ? AND emoji = ?').run(messageId, username, emoji);
+}
+
+export function getReactions(messageId: number): { emoji: string; username: string }[] {
+  return db.prepare('SELECT emoji, username FROM reactions WHERE message_id = ?').all(messageId) as { emoji: string; username: string }[];
+}
+
+export function getReactionsForMessages(messageIds: number[]): Record<number, { emoji: string; users: string[] }[]> {
+  if (messageIds.length === 0) return {};
+  const rows = db.prepare(
+    `SELECT message_id, emoji, username FROM reactions WHERE message_id IN (${messageIds.join(',')})`
+  ).all() as { message_id: number; emoji: string; username: string }[];
+
+  const result: Record<number, Record<string, string[]>> = {};
+  for (const row of rows) {
+    if (!result[row.message_id]) result[row.message_id] = {};
+    if (!result[row.message_id][row.emoji]) result[row.message_id][row.emoji] = [];
+    result[row.message_id][row.emoji].push(row.username);
+  }
+
+  const formatted: Record<number, { emoji: string; users: string[] }[]> = {};
+  for (const [msgId, emojis] of Object.entries(result)) {
+    formatted[Number(msgId)] = Object.entries(emojis).map(([emoji, users]) => ({ emoji, users }));
+  }
+  return formatted;
+}
+
 export function insertMessage(
   roomId: string,
   username: string,
@@ -149,13 +188,14 @@ export function insertMessage(
   fileUrl: string | null = null,
   fileType: string | null = null,
   fileName: string | null = null,
-  forwarded: boolean = false
+  forwarded: boolean = false,
+  replyToId: number | null = null
 ): Message {
   const result = db
     .prepare(
-      'INSERT INTO messages (room_id, username, avatar_id, content, type, file_url, file_type, file_name, forwarded) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
+      'INSERT INTO messages (room_id, username, avatar_id, content, type, file_url, file_type, file_name, forwarded, reply_to_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
     )
-    .run(roomId, username, avatarId, content, type, fileUrl, fileType, fileName, forwarded ? 1 : 0);
+    .run(roomId, username, avatarId, content, type, fileUrl, fileType, fileName, forwarded ? 1 : 0, replyToId);
 
-  return db.prepare('SELECT * FROM messages WHERE id = ?').get(result.lastInsertRowid) as Message;
+  return db.prepare(`${MSG_SELECT} WHERE m.id = ?`).get(result.lastInsertRowid) as Message;
 }
