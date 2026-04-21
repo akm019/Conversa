@@ -1,0 +1,95 @@
+.container {
+  position: relative;
+}
+
+.toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: rgba(139, 92, 246, 0.1);
+  border: 1px solid rgba(139, 92, 246, 0.2);
+  border-radius: var(--radius-full);
+  padding: 0.4rem 0.8rem;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  font-size: 0.75rem;
+  font-weight: 600;
+  transition: all 0.15s;
+}
+
+.toggle:hover {
+  background: rgba(139, 92, 246, 0.18);
+  color: var(--color-text-primary);
+  border-color: var(--color-accent);
+  box-shadow: var(--shadow-glow);
+}
+
+.dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--color-online);
+  box-shadow: 0 0 6px rgba(52, 211, 153, 0.6);
+}
+
+.count {
+  white-space: nowrap;
+}
+
+.dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 0.4rem 0;
+  min-width: 200px;
+  box-shadow: var(--shadow-lg);
+  z-index: 50;
+}
+
+.dropdownHeader {
+  padding: 0.4rem 0.85rem 0.4rem;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-text-muted);
+}
+
+.user {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.45rem 0.85rem;
+}
+
+.userAvatar {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+  border: 1.5px solid rgba(139, 92, 246, 0.15);
+}
+
+.userDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--color-online);
+  flex-shrink: 0;
+  margin-left: auto;
+  box-shadow: 0 0 4px rgba(52, 211, 153, 0.5);
+}
+
+.userName {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
