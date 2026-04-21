@@ -1,114 +1,202 @@
-# Real-Time Chat
+# *Conversa*
 
-A real-time chat application built with React, Socket.IO, and SQLite.
+A real-time chat platform built with React, TypeScript, Socket.IO, and SQLite.
+
+### [Try it live](https://conversa-6o6h.onrender.com/)
+
+> **Note:** The app is hosted on Render's free tier. It may take ~30 seconds to wake up on first visit if it's been idle.
+
+---
 
 ## Features
 
-- **Real-time messaging** — Messages appear instantly via WebSocket (Socket.IO)
-- **Multiple rooms** — Create and switch between chat rooms
-- **Direct messages** — Private 1-on-1 conversations between users
-- **Message persistence** — Messages saved to SQLite, survive page refresh
-- **Online presence** — See who's online globally and per-room
-- **Typing indicators** — Animated "user is typing..." with debounced emissions
-- **Connection resilience** — Auto-reconnect with visual status banner
-- **Responsive design** — Desktop layout + mobile drawer sidebar
-- **Date dividers** — Messages grouped with "Today", "Yesterday" labels
-- **Cursor-based pagination** — Infinite scroll with O(1) query performance
-- **User avatars** — Color-coded initials for visual identity
-- **Rate limiting** — Server-side spam protection (5 msg/sec)
-- **XSS prevention** — All message content sanitized server-side
+### Messaging
+- **Real-time chat** — Messages appear instantly via WebSocket (Socket.IO)
+- **Rooms** — Public and private chat rooms with admin controls
+- **Direct Messages** — 1-on-1 private conversations
+- **Reply / Quote** — Reply to a specific message with a quoted preview
+- **Edit & Delete** — Modify or remove your own messages
+- **Forward** — Forward messages to multiple rooms or people at once
+- **Message Reactions** — React with emoji (toggle on/off, visible to all)
+- **File & Image Sharing** — Upload and share files with inline image preview
+- **Emoji Picker** — Full emoji keyboard built into the message input
+
+### Real-Time Features
+- **Typing Indicators** — See when someone is typing (rooms and DMs)
+- **Online Presence** — Live user list with avatars in the sidebar and chat header
+- **Read Receipts** — Sent, delivered, and read status ticks for DMs
+- **Unread Badges** — Notification counts on rooms and DMs in the sidebar
+- **Sound Notifications** — Subtle audio alert when a message arrives in background
+
+### Rooms & Access Control
+- **Public Rooms** — Visible to everyone, anyone can join
+- **Private Rooms** — Only invited members can see and join
+- **Room Admin** — Creator can invite members, delete the room
+- **Real-time Invites** — Invited users get an instant notification banner with "Join" button
+
+### UI & UX
+- **Dark / Light Theme** — Toggle in sidebar, persists across sessions
+- **Avatar Selection** — Choose from 5 3D avatars on join
+- **Responsive Design** — Works on desktop and mobile
+- **Glassmorphism UI** — Purple/black gradient (dark) or white/blue tint (light)
+- **Italic branding** — "Conversa" in Playfair Display
+
+---
 
 ## Tech Stack
 
 | Layer | Technology | Why |
 |-------|-----------|-----|
-| Frontend | React + TypeScript + Vite | Modern, fast DX, type safety |
-| Styling | CSS Modules + CSS Variables | Scoped styles, dark theme, no deps |
-| Real-time | Socket.IO | Reconnection, rooms, fallback transports |
-| Backend | Express + TypeScript | Clean routing, middleware support |
-| Database | SQLite (better-sqlite3) | Zero config, single-file persistence |
-| State | React Context + Custom Hooks | Simple — only 2 pieces of global state |
+| **Frontend** | React + TypeScript + Vite | Modern, fast DX, full type safety |
+| **Styling** | CSS Modules + CSS Variables | Scoped styles, theme switching, no dependencies |
+| **Real-time** | Socket.IO | Reconnection, rooms, fallback transports |
+| **Backend** | Express + TypeScript | Clean routing, middleware support |
+| **Database** | SQLite (better-sqlite3) | Zero config, single-file persistence, WAL mode |
+| **State** | React Context + Custom Hooks | Simple — only global state is user + socket |
+| **Deployment** | Render | Free tier, auto-deploy on push |
 
-## Getting Started
-
-### Prerequisites
-
-- Node.js 18+
-- npm 9+
-
-### Installation
-
-```bash
-cd realtime-chat
-npm install
-```
-
-### Development
-
-```bash
-# Run both server and client
-npm run dev
-
-# Or run them separately
-npm run dev:server   # Express on http://localhost:3001
-npm run dev:client   # Vite on http://localhost:5173
-```
-
-Open http://localhost:5173 in your browser. Open a second tab with a different username to test real-time messaging and DMs.
+---
 
 ## Architecture
 
 ```
 realtime-chat/
 ├── server/src/
-│   ├── server.ts          # HTTP + Socket.IO bootstrap
-│   ├── app.ts             # Express routes + middleware
-│   ├── db/                # SQLite connection, schema, queries
-│   ├── routes/            # REST endpoints (rooms, messages, DMs)
-│   ├── socket/            # Real-time event handlers
-│   │   ├── middleware.ts   # Auth (username validation)
-│   │   └── handlers/      # chat, room, presence handlers
-│   └── utils/             # XSS sanitization
+│   ├── server.ts             # HTTP + Socket.IO bootstrap
+│   ├── app.ts                # Express routes + static serving
+│   ├── config.ts             # Environment config
+│   ├── db/
+│   │   ├── index.ts          # SQLite connection (WAL mode)
+│   │   ├── schema.ts         # Tables: rooms, messages, room_members, reactions
+│   │   └── queries.ts        # All DB operations (prepared statements)
+│   ├── routes/
+│   │   ├── rooms.ts          # CRUD rooms + members
+│   │   ├── messages.ts       # Paginated message history
+│   │   ├── dm.ts             # DM conversations
+│   │   └── upload.ts         # File uploads (multer)
+│   ├── socket/
+│   │   ├── index.ts          # Connection handler + event registry
+│   │   ├── middleware.ts      # Auth (username + avatar validation)
+│   │   └── handlers/
+│   │       ├── chat.ts       # Messages, edit, delete, forward, reactions, read receipts
+│   │       ├── room.ts       # Join/leave with membership checks
+│   │       └── presence.ts   # Online tracking, typing indicators
+│   └── utils/sanitize.ts     # XSS prevention
+│
 ├── client/src/
-│   ├── context/           # UserContext, SocketContext
-│   ├── hooks/             # useMessages, useRooms, useDms, usePresence, useTyping, useGlobalPresence
-│   └── components/        # UI components (Sidebar, MessageArea, etc.)
+│   ├── App.tsx               # Root: theme + user + socket providers
+│   ├── socket.ts             # Socket.IO client singleton
+│   ├── context/
+│   │   ├── UserContext.tsx    # Username + avatar (sessionStorage)
+│   │   ├── SocketContext.tsx  # Socket instance + connection state
+│   │   └── ThemeContext.tsx   # Dark/light toggle (localStorage)
+│   ├── hooks/
+│   │   ├── useMessages.ts    # Fetch + subscribe + pagination + status
+│   │   ├── useRooms.ts       # Room CRUD + invite + real-time updates
+│   │   ├── useDms.ts         # DM conversations
+│   │   ├── usePresence.ts    # Per-room online users
+│   │   ├── useGlobalPresence.ts  # All online users
+│   │   ├── useTyping.ts      # Typing indicators (rooms + DMs)
+│   │   ├── useUnread.ts      # Unread counts per room/DM
+│   │   └── useNotificationSound.ts  # Background audio alerts
+│   └── components/
+│       ├── ChatLayout.tsx     # Main layout: sidebar + header + messages + input
+│       ├── JoinScreen.tsx     # Username + avatar picker
+│       ├── Avatar.tsx         # Reusable avatar image component
+│       ├── MessageInput.tsx   # Text + emoji + file + reply preview
+│       ├── OnlineUsers.tsx    # Dropdown: who's in the room
+│       ├── OnlineAvatars.tsx  # Avatar stack in header
+│       ├── InviteModal.tsx    # Invite users to private rooms
+│       ├── Sidebar/           # Rooms, DMs, online users, theme toggle
+│       └── MessageArea/       # Bubbles, reactions, forward modal, typing
 ```
 
-### Key Design Decisions
+---
 
-**Why persist messages?** Real chat products save history. Users expect to see previous messages when they return. SQLite makes this trivial with zero infrastructure.
+## Key Design Decisions
 
-**Why cursor-based pagination?** Using `WHERE id < ?` instead of `OFFSET` gives consistent O(1) performance regardless of scroll depth, and is stable under concurrent inserts.
+**Why Socket.IO over raw WebSocket?**
+Built-in reconnection, room abstraction, and transport fallback. In a chat app, reliability matters more than raw performance.
 
-**Why no user accounts?** Adding auth adds significant complexity with minimal UX benefit for this scope. Usernames are entered on join and stored in sessionStorage — simple but sufficient for identity.
+**Why SQLite?**
+Zero infrastructure — no database server to set up. Messages persist across refresh. WAL mode handles concurrent reads. For this scope, it's the right trade-off.
 
-**Why DMs as rooms?** A DM is implemented as a room with `type='dm'` and a deterministic ID (`dm:alice:bob`, names sorted). This reuses all existing message infrastructure — storage, pagination, real-time delivery — without duplication.
+**Why cursor-based pagination?**
+`WHERE id < ? ORDER BY id DESC LIMIT 50` is O(1) via the index regardless of message volume. Offset-based pagination degrades as you scroll deeper.
 
-**Why typing indicators + presence?** These transform a message board into a conversation. Seeing someone online and typing creates engagement and natural turn-taking.
+**Why DMs as rooms?**
+A DM is just a room with `type='dm'` and a deterministic ID (`dm:alice:bob`). This reuses the entire message pipeline — storage, pagination, real-time broadcast, reactions, read receipts — with zero code duplication.
 
-**Why CSS Modules over Tailwind?** For a project of this size, CSS Modules provide scoped styles without build complexity. The resulting code is more readable to reviewers unfamiliar with utility-first CSS.
+**Why presence + typing + reactions?**
+These are what transform a message board into a conversation. Seeing someone online and typing creates engagement. Reactions let you acknowledge without cluttering the chat.
 
-### API
+**Why CSS Modules over Tailwind?**
+Scoped styles without build complexity. The code is more readable to reviewers who don't know utility-first CSS. CSS variables make theming trivial.
 
-**REST Endpoints:**
-- `GET /api/rooms` — List all chat rooms
-- `POST /api/rooms` — Create a room (`{ name: string }`)
-- `GET /api/rooms/:id/messages?before=<id>&limit=50` — Paginated messages
-- `GET /api/dm?username=<name>` — List DM conversations for a user
-- `POST /api/dm` — Create/get a DM (`{ user1: string, user2: string }`)
+---
 
-**Socket Events (client -> server):**
-- `join_room` / `leave_room` — Room membership
-- `send_message` — Send a room message
-- `send_dm` — Send a direct message (`{ to: string, content: string }`)
-- `typing_start` / `typing_stop` — Typing state
-- `room_created` — Broadcast new room
+## Getting Started
 
-**Socket Events (server -> client):**
-- `new_message` — Room message broadcast
-- `dm_message` — DM delivered to both users (`{ dm, message }`)
-- `user_joined` / `user_left` — Per-room presence updates
-- `global_online_users` — All online usernames
-- `typing_update` — Currently typing users
-- `room_created` — New room broadcast
+### Prerequisites
+- Node.js 18+
+- npm 9+
+
+### Install & Run
+
+```bash
+git clone https://github.com/akm019/Conversa.git
+cd Conversa
+npm install
+npm run dev
+```
+
+Open http://localhost:5173 — the Vite dev server proxies API and WebSocket to the Express server on port 3001.
+
+### Production Build
+
+```bash
+npm run build    # Builds client + server
+npm start        # Serves everything from port 3001
+```
+
+---
+
+## API Reference
+
+### REST
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/api/rooms?username=X` | List rooms visible to user |
+| `POST` | `/api/rooms` | Create room `{ name, createdBy, isPrivate }` |
+| `DELETE` | `/api/rooms/:id?username=X` | Delete room (admin only) |
+| `POST` | `/api/rooms/:id/members` | Invite member `{ username, addedBy }` |
+| `GET` | `/api/rooms/:id/members` | List room members |
+| `GET` | `/api/rooms/:id/messages?before=N` | Paginated messages |
+| `GET` | `/api/dm?username=X` | List DM conversations |
+| `POST` | `/api/dm` | Create/get DM `{ user1, user2 }` |
+| `POST` | `/api/upload` | Upload file (multipart, 10MB max) |
+
+### Socket Events
+
+| Event | Direction | Purpose |
+|-------|-----------|---------|
+| `send_message` | Client → Server | Send room message (+ optional file, reply, forward) |
+| `send_dm` | Client → Server | Send DM |
+| `new_message` / `dm_message` | Server → Client | Real-time message delivery |
+| `edit_message` / `delete_message` | Client → Server | Modify own messages |
+| `toggle_reaction` | Client → Server | Add/remove emoji reaction |
+| `typing_start` / `typing_stop` | Both | Typing indicators |
+| `join_room` / `leave_room` | Client → Server | Room membership |
+| `dm_delivered` / `dm_read` | Client → Server | Read receipt signals |
+| `message_status_update` | Server → Client | Delivery/read status changes |
+| `global_online_users` | Server → Client | All online users with avatars |
+| `room_invite` | Both | Private room invitation |
+| `room_created` / `room_deleted` | Both | Room lifecycle |
+| `reaction_update` | Server → Client | Updated reaction list for a message |
+
+---
+
+## License
+
+MIT
