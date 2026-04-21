@@ -53,16 +53,16 @@
 /* ===== LIGHT THEME ===== */
 [data-theme="light"] {
   --color-bg-primary: #f0f4ff;
-  --color-bg-secondary: #ffffff;
-  --color-bg-tertiary: #f7f8fc;
-  --color-bg-elevated: #eef2ff;
+  --color-bg-secondary: #e8eeff;
+  --color-bg-tertiary: #f0f3ff;
+  --color-bg-elevated: #dfe6ff;
   --color-bg-hover: rgba(59, 130, 246, 0.06);
   --color-bg-active: rgba(59, 130, 246, 0.1);
-  --color-bg-message-other: #ffffff;
-  --color-bg-input: #f8faff;
+  --color-bg-message-other: #eef2ff;
+  --color-bg-input: #e8eeff;
 
-  --glass-bg: rgba(255, 255, 255, 0.8);
-  --glass-border: rgba(59, 130, 246, 0.12);
+  --glass-bg: rgba(224, 232, 255, 0.8);
+  --glass-border: rgba(59, 130, 246, 0.15);
   --glass-blur: blur(20px);
   --glass-bg-hover: rgba(59, 130, 246, 0.06);
 
@@ -72,8 +72,8 @@
   --color-accent-glow: rgba(59, 130, 246, 0.15);
 
   --gradient-accent: linear-gradient(135deg, #2563eb, #3b82f6, #60a5fa);
-  --gradient-bg: linear-gradient(160deg, #f0f4ff 0%, #e8eeff 35%, #f0f4ff 65%, #eef2ff 100%);
-  --gradient-sidebar: linear-gradient(180deg, #f7f8fc 0%, #ffffff 100%);
+  --gradient-bg: linear-gradient(160deg, #eef2ff 0%, #e0e8ff 35%, #eef2ff 65%, #e8eeff 100%);
+  --gradient-sidebar: linear-gradient(180deg, #e0e8ff 0%, #e8eeff 100%);
 
   --color-text-primary: #1e293b;
   --color-text-secondary: #64748b;
